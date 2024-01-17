@@ -193,7 +193,18 @@ Public Sub RunLottery()
         .Apply
     End With
     
+    Dim SelectionStatusColumn As ListColumn
+    Dim ApplicantNameColumn As ListColumn
+    Dim SiblingNameColumn As ListColumn
+    
+    Set SelectionStatusColumn = RegistrationTable.ListColumns("Lottery Selection Status")
+    Set ApplicantNameColumn = RegistrationTable.ListColumns("Camper Name")
+    Set SiblingNameColumn = RegistrationTable.ListColumns("Please enter the full name of the friend or sibling.")
+    
     Dim Application As ListRow
+    Dim SiblingApplication As ListRow
+    Dim SiblingApplicationRow As Range
+    
     For Each Application In RegistrationTable.ListRows
         Dim CampName As String
         CampName = Application.Range(1).Value2
@@ -202,6 +213,9 @@ Public Sub RunLottery()
         Dim FilledSpotsColumn As Range
         Dim Limit As Range
         Dim FilledSpots As Range
+        
+        Dim SelectedStatus As Range
+        Dim SiblingName As Range
                 
         Set LimitsColumn = ConfigTable.ListColumns("Limit").DataBodyRange
         Set FilledSpotsColumn = ConfigTable.ListColumns("Filled Spots").DataBodyRange
@@ -213,11 +227,29 @@ Public Sub RunLottery()
         Set FilledSpots = Intersect(CampDataRow, FilledSpotsColumn)
         
         If FilledSpots.Value2 < Limit.Value2 Then
-            Application.Range(7).Value2 = "Picked"
+            Set SelectedStatus = Intersect(Application.Range, SelectionStatusColumn.Range)
+            Set SiblingName = Intersect(Application.Range, SiblingNameColumn.Range)
+            
+            SelectedStatus.Value2 = "Picked via Lottery"
             FilledSpots.Value2 = FilledSpots.Value2 + 1
+            
+            If SiblingName.Value2 <> vbNullString Then
+                
+                ' Set SiblingApplicationRow = ApplicantNameColumn.DataBodyRange.Find(SiblingName.Value2).EntireRow
+                SiblingApplicationRow = WorksheetFunction.Match(SiblingName.Value2, ApplicantNameColumn.Range, 0)
+                SiblingApplication = RegistrationTable.DataBodyRange.Rows(SiblingApplicationRow)
+                                
+                Set SelectedStatus = Intersect(SiblingApplication, SelectionStatusColumn)
+                If SelectedStatus.Value2 = vbNullString Then
+                    SelectedStatus.Value2 = "Picked via Sibling"
+                    FilledSpots.Value2 = FilledSpots.Value2 + 1
+                End If
+            End If
+            
         Else
             Application.Range(7).Value2 = "Not Picked"
         End If
+        
         
        
 
