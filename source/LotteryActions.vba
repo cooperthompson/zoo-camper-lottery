@@ -28,24 +28,46 @@ Public Sub Initialize()
     Dim LastColumn As Long
     Dim LastCell As Range
     
-    LastRow = EventCell.CurrentRegion.Rows(EventCell.CurrentRegion.Rows.Count).Row
+    LastRow = EventCell.CurrentRegion.Rows(EventCell.CurrentRegion.Rows.Count).row
     LastColumn = EventCell.CurrentRegion.Columns(EventCell.CurrentRegion.Columns.Count).Column
     Set LastCell = Cells(LastRow, LastColumn)
     
     Set RegistrationTable = RegistrationWorksheet.ListObjects.Add(xlSrcRange, Range(EventCell, LastCell), , xlYes)
     RegistrationTable.Name = "LotteryResults"
     
-    RegistrationTable.ListColumns.Add(RegistrationTable.ListColumns.Count + 1).Name = "Applicants"
-    RegistrationTable.ListColumns("Applicants").Range.EntireColumn.AutoFit
-    
-    RegistrationTable.ListColumns.Add(RegistrationTable.ListColumns.Count + 1).Name = "Lottery Selection Status"
-    RegistrationTable.ListColumns("Lottery Selection Status").Range.EntireColumn.AutoFit
-    
+   
     Call GenConfig
     
+    RegistrationTable.ListColumns.Add(4).Name = "Applicants"
     RegistrationTable.ListColumns("Applicants").DataBodyRange.NumberFormat = "General"
     RegistrationTable.ListColumns("Applicants").DataBodyRange.Formula = "=VLOOKUP([@Event],ConfigTable[#All],2,FALSE)"
     
+    RegistrationTable.ListColumns.Add(5).Name = "Camp Limit"
+    RegistrationTable.ListColumns("Camp Limit").DataBodyRange.NumberFormat = "General"
+    RegistrationTable.ListColumns("Camp Limit").DataBodyRange.Formula = "=VLOOKUP([@Event],ConfigTable[#All],3,FALSE)"
+    
+    RegistrationTable.ListColumns.Add(6).Name = "Lottery Selection Status"
+    
+    Call FixColumnWidths(RegistrationTable)
+    
+End Sub
+
+Public Sub FixColumnWidths(tbl As ListObject)
+    tbl.Range.ColumnWidth = 200
+    
+    Dim col As ListColumn
+    Dim row As ListRow
+    
+    For Each col In tbl.ListColumns
+        col.Range.EntireColumn.AutoFit
+    Next col
+    
+    For Each row In tbl.ListRows
+        row.Range.EntireRow.AutoFit
+    Next row
+    
+    
+
 End Sub
 
 Public Sub GenConfig()
@@ -85,7 +107,7 @@ Public Sub GenConfig()
     End With
     
     pt.AddDataField pt.PivotFields("Registration #"), "Count of Registrations", xlCount
-    pt.PivotFields("Event").AutoSort xlDescending, "Count of Registrations"
+    pt.PivotFields("Event").AutoSort xlAscending, "Count of Registrations"
     
     pc.Refresh
     
@@ -96,10 +118,109 @@ Public Sub GenConfig()
     ConfigWorksheet.ListObjects("ConfigTable").ListColumns.Add(3).Name = "Limit"
     ConfigWorksheet.ListObjects("ConfigTable").ListColumns("Limit").DataBodyRange.Value = 10
     
-    
+    ConfigWorksheet.ListObjects("ConfigTable").ListColumns.Add(4).Name = "Filled Spots"
+    ConfigWorksheet.ListObjects("ConfigTable").ListColumns("Filled Spots").DataBodyRange.Value = 0
+        
     Dim TotalRow As Range
     ConfigWorksheet.ListObjects("ConfigTable").Range.Find(What:="Grand Total").EntireRow.Delete
     
     Range("C2").Select
+   
+End Sub
+
+Public Sub GenRandomPermutation(tbl As ListObject)
+    On Error Resume Next
+    ThisWorkbook.Sheets("Random Draw").Delete
+    On Error GoTo 0
+
+    Dim RandomSheet As Worksheet
+    Set RandomSheet = ThisWorkbook.Sheets.Add(After:=ActiveWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+    RandomSheet.Name = "Random Draw"
     
+    Dim RandomTable As ListObject
+    Dim TableHeader As ListObject
+    Dim i As Long
+    Dim row As ListRow
+    Set RandomTable = RandomSheet.ListObjects.Add(xlSrcRange, Range("A1"), , xlYes)
+    RandomTable.HeaderRowRange.Value2 = "Random Draw"
+    For i = 1 To tbl.ListRows.Count
+        Set row = RandomTable.ListRows.Add
+        row.Range(1, 1) = i + 10000
+    Next i
+    
+    RandomTable.DataBodyRange.Select
+    Call Random
+    
+    tbl.ListColumns.Add(6).Name = "Random Draw"
+    
+    RandomTable.Range.Copy
+    tbl.ListColumns("Random Draw").Range.PasteSpecial Paste:=xlPasteValues
+End Sub
+
+Sub Random()
+    Dim x As Long
+    Dim y As Long
+    Dim z As Long
+    Dim r As Long
+    
+    For x = 1 To Selection.Rows.Count
+       Randomize Timer
+       r = Int(Rnd(1) * (Selection.Rows.Count) + 1)
+       For z = 1 To Selection.Columns.Count
+    
+           y = Selection.Cells(x, z).Formula
+           Selection.Cells(x, z).Formula = Selection.Cells(r, z).Formula
+           Selection.Cells(r, z).Formula = y
+       Next z
+    Next x
+End Sub
+
+Public Sub RunLottery()
+    Set RegistrationWorksheet = ThisWorkbook.Sheets("Lottery Results")
+    Set RegistrationTable = RegistrationWorksheet.ListObjects("LotteryResults")
+    Set ConfigWorksheet = ThisWorkbook.Sheets("Camp Config")
+    Set ConfigTable = ConfigWorksheet.ListObjects("ConfigTable")
+
+    Call GenRandomPermutation(RegistrationTable)
+    Call FixColumnWidths(RegistrationTable)
+
+    With RegistrationTable.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=RegistrationTable.ListColumns("Start Date").Range, Order:=xlAscending
+        .SortFields.Add Key:=RegistrationTable.ListColumns("Applicants").Range, Order:=xlAscending
+        .SortFields.Add Key:=RegistrationTable.ListColumns("Random Draw").Range, Order:=xlAscending
+        .Header = xlYes
+        .Apply
+    End With
+    
+    Dim Application As ListRow
+    For Each Application In RegistrationTable.ListRows
+        Dim CampName As String
+        CampName = Application.Range(1).Value2
+        
+        Dim LimitsColumn As Range
+        Dim FilledSpotsColumn As Range
+        Dim Limit As Range
+        Dim FilledSpots As Range
+                
+        Set LimitsColumn = ConfigTable.ListColumns("Limit").DataBodyRange
+        Set FilledSpotsColumn = ConfigTable.ListColumns("Filled Spots").DataBodyRange
+        
+        Dim CampDataRow As Range
+        Set CampDataRow = ConfigTable.ListColumns("Row Labels").DataBodyRange.Find(CampName).EntireRow
+        
+        Set Limit = Intersect(CampDataRow, LimitsColumn)
+        Set FilledSpots = Intersect(CampDataRow, FilledSpotsColumn)
+        
+        If FilledSpots.Value2 < Limit.Value2 Then
+            Application.Range(7).Value2 = "Picked"
+            FilledSpots.Value2 = FilledSpots.Value2 + 1
+        Else
+            Application.Range(7).Value2 = "Not Picked"
+        End If
+        
+       
+
+    Next Application
+           
 End Sub

@@ -20,15 +20,7 @@ Sub LoadCustRibbon()
     ribbonXML = ribbonXML + "                      onAction='RibbonActions.cmdInitialize_onAction'" & vbNewLine
     ribbonXML = ribbonXML + "                      screentip='Initialize Spreadsheet'" & vbNewLine
     ribbonXML = ribbonXML + "                      supertip='Initialize the sheet.'/>" & vbNewLine
-    
-    ribbonXML = ribbonXML + "          <mso:button id='runCasinoConfig'" & vbNewLine
-    ribbonXML = ribbonXML + "                      imageMso='ExportTextFile'" & vbNewLine
-    ribbonXML = ribbonXML + "                      size='large'" & vbNewLine
-    ribbonXML = ribbonXML + "                      label='Generate Camp Config'" & vbNewLine
-    ribbonXML = ribbonXML + "                      onAction='RibbonActions.cmdGenCampConfig_onAction'" & vbNewLine
-    ribbonXML = ribbonXML + "                      screentip='Camp Config'" & vbNewLine
-    ribbonXML = ribbonXML + "                      supertip='Generate the camp config sheet.'/>" & vbNewLine
-    
+   
     ribbonXML = ribbonXML + "          <mso:button id='runCasinoLottery'" & vbNewLine
     ribbonXML = ribbonXML + "                      imageMso='ExportTextFile'" & vbNewLine
     ribbonXML = ribbonXML + "                      size='large'" & vbNewLine
