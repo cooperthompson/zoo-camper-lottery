@@ -13,6 +13,7 @@ Sub LoadCustRibbon()
     ribbonXML = ribbonXML + "    <mso:tabs>" & vbNewLine
     ribbonXML = ribbonXML + "      <mso:tab id='casinoTab' label='Zoo Lottery' insertBeforeQ='mso:TabFormat'>" & vbNewLine
     ribbonXML = ribbonXML + "        <mso:group id='groupRunCasino' label='Zoo Camp Lottery' autoScale='true'>" & vbNewLine
+    
     ribbonXML = ribbonXML + "          <mso:button id='initCasino'" & vbNewLine
     ribbonXML = ribbonXML + "                      imageMso='ExportTextFile'" & vbNewLine
     ribbonXML = ribbonXML + "                      size='large'" & vbNewLine
@@ -21,6 +22,14 @@ Sub LoadCustRibbon()
     ribbonXML = ribbonXML + "                      screentip='Initialize Spreadsheet'" & vbNewLine
     ribbonXML = ribbonXML + "                      supertip='Initialize the sheet.'/>" & vbNewLine
    
+    ribbonXML = ribbonXML + "          <mso:button id='runDuplicateRemoval'" & vbNewLine
+    ribbonXML = ribbonXML + "                      imageMso='ExportTextFile'" & vbNewLine
+    ribbonXML = ribbonXML + "                      size='large'" & vbNewLine
+    ribbonXML = ribbonXML + "                      label='Remove Duplicates'" & vbNewLine
+    ribbonXML = ribbonXML + "                      onAction='cmdRemoveDuplicates_onAction'" & vbNewLine
+    ribbonXML = ribbonXML + "                      screentip='Remove Duplicates'" & vbNewLine
+    ribbonXML = ribbonXML + "                      supertip='Removes duplicate applications.'/>" & vbNewLine
+   
     ribbonXML = ribbonXML + "          <mso:button id='runCasinoLottery'" & vbNewLine
     ribbonXML = ribbonXML + "                      imageMso='ExportTextFile'" & vbNewLine
     ribbonXML = ribbonXML + "                      size='large'" & vbNewLine
@@ -28,7 +37,17 @@ Sub LoadCustRibbon()
     ribbonXML = ribbonXML + "                      onAction='cmdRollDice_onAction'" & vbNewLine
     ribbonXML = ribbonXML + "                      screentip='Roll Dice'" & vbNewLine
     ribbonXML = ribbonXML + "                      supertip='Run the Casino Roll Dice process.'/>" & vbNewLine
+    
+    ribbonXML = ribbonXML + "          <mso:button id='runTestCommand'" & vbNewLine
+    ribbonXML = ribbonXML + "                      imageMso='ExportTextFile'" & vbNewLine
+    ribbonXML = ribbonXML + "                      size='large'" & vbNewLine
+    ribbonXML = ribbonXML + "                      label='Run Test'" & vbNewLine
+    ribbonXML = ribbonXML + "                      onAction='cmdTest_onAction'" & vbNewLine
+    ribbonXML = ribbonXML + "                      screentip='Test Command'" & vbNewLine
+    ribbonXML = ribbonXML + "                      supertip='Run a test command.  Used for debugging.'/>" & vbNewLine
+    
     ribbonXML = ribbonXML + "        </mso:group>" & vbNewLine
+    
     
     ribbonXML = ribbonXML + "        <mso:group id='groupCasinoSettings' label='Settings' autoScale='true'>" & vbNewLine
     ribbonXML = ribbonXML + "          <mso:button id='runCasinoSettings'" & vbNewLine
