@@ -16,7 +16,7 @@ Public Sub Initialize()
     On Error GoTo 0
     
     ThisWorkbook.Sheets(1).Copy After:=Worksheets(Worksheets.Count)
-    ActiveSheet.Name = "Lottery Results"
+    ActiveSheet.name = "Lottery Results"
     
     Set RegistrationWorksheet = ThisWorkbook.Sheets("Lottery Results")
     
@@ -33,20 +33,22 @@ Public Sub Initialize()
     Set LastCell = Cells(LastRow, LastColumn)
     
     Set RegistrationTable = RegistrationWorksheet.ListObjects.Add(xlSrcRange, Range(EventCell, LastCell), , xlYes)
-    RegistrationTable.Name = "LotteryResults"
+    RegistrationTable.name = "LotteryResults"
     
    
     Call GenConfig
     
-    RegistrationTable.ListColumns.Add(4).Name = "Applicants"
+    RegistrationTable.ListColumns.Add(4).name = "Applicants"
     RegistrationTable.ListColumns("Applicants").DataBodyRange.NumberFormat = "General"
     RegistrationTable.ListColumns("Applicants").DataBodyRange.Formula = "=VLOOKUP([@Event],ConfigTable[#All],2,FALSE)"
     
-    RegistrationTable.ListColumns.Add(5).Name = "Camp Limit"
+    RegistrationTable.ListColumns.Add(5).name = "Camp Limit"
     RegistrationTable.ListColumns("Camp Limit").DataBodyRange.NumberFormat = "General"
     RegistrationTable.ListColumns("Camp Limit").DataBodyRange.Formula = "=VLOOKUP([@Event],ConfigTable[#All],3,FALSE)"
     
-    RegistrationTable.ListColumns.Add(6).Name = "Lottery Selection Status"
+    RegistrationTable.ListColumns.Add(6).name = "Random Draw"
+    
+    RegistrationTable.ListColumns.Add(7).name = "Lottery Selection Status"
     
     Call FixColumnWidths(RegistrationTable)
     
@@ -65,8 +67,6 @@ Public Sub FixColumnWidths(tbl As ListObject)
     For Each row In tbl.ListRows
         row.Range.EntireRow.AutoFit
     Next row
-    
-    
 
 End Sub
 
@@ -85,7 +85,7 @@ Public Sub GenConfig()
     Dim ConfigSheetExists As Boolean
     
     For Each Sheet In ThisWorkbook.Sheets
-        If Sheet.Name = ConfigSheetName Then
+        If Sheet.name = ConfigSheetName Then
             MsgBox ("The " & ConfigSheetName & "worksheet already exists.  Delete it, and re-run the config generator if you want to regen the config table.")
             ConfigSheetExists = True
         End If
@@ -93,7 +93,7 @@ Public Sub GenConfig()
                 
     If Not ConfigSheetExists Then
         Set ConfigWorksheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
-        ConfigWorksheet.Name = ConfigSheetName
+        ConfigWorksheet.name = ConfigSheetName
     End If
     
     Dim pc As PivotCache
@@ -113,12 +113,12 @@ Public Sub GenConfig()
     
     pt.TableRange2.Copy
     ConfigWorksheet.Range("A1").PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
-    ConfigWorksheet.ListObjects.Add(xlSrcRange, Range("A1", Range("A1").End(xlToRight).End(xlDown)), , xlYes).Name = "ConfigTable"
+    ConfigWorksheet.ListObjects.Add(xlSrcRange, Range("A1", Range("A1").End(xlToRight).End(xlDown)), , xlYes).name = "ConfigTable"
     
-    ConfigWorksheet.ListObjects("ConfigTable").ListColumns.Add(3).Name = "Limit"
-    ConfigWorksheet.ListObjects("ConfigTable").ListColumns("Limit").DataBodyRange.Value = 10
+    ConfigWorksheet.ListObjects("ConfigTable").ListColumns.Add(3).name = "Limit"
+    ConfigWorksheet.ListObjects("ConfigTable").ListColumns("Limit").DataBodyRange.Value = 15
     
-    ConfigWorksheet.ListObjects("ConfigTable").ListColumns.Add(4).Name = "Filled Spots"
+    ConfigWorksheet.ListObjects("ConfigTable").ListColumns.Add(4).name = "Filled Spots"
     ConfigWorksheet.ListObjects("ConfigTable").ListColumns("Filled Spots").DataBodyRange.Value = 0
         
     Dim TotalRow As Range
@@ -135,7 +135,7 @@ Public Sub GenRandomPermutation(tbl As ListObject)
 
     Dim RandomSheet As Worksheet
     Set RandomSheet = ThisWorkbook.Sheets.Add(After:=ActiveWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
-    RandomSheet.Name = "Random Draw"
+    RandomSheet.name = "Random Draw"
     
     Dim RandomTable As ListObject
     Dim TableHeader As ListObject
@@ -150,8 +150,6 @@ Public Sub GenRandomPermutation(tbl As ListObject)
     
     RandomTable.DataBodyRange.Select
     Call Random
-    
-    tbl.ListColumns.Add(6).Name = "Random Draw"
     
     RandomTable.Range.Copy
     tbl.ListColumns("Random Draw").Range.PasteSpecial Paste:=xlPasteValues
@@ -175,13 +173,29 @@ Sub Random()
     Next x
 End Sub
 
+Public Sub RemoveDuplicates()
+    Set RegistrationWorksheet = ThisWorkbook.Sheets("Lottery Results")
+    Set RegistrationTable = RegistrationWorksheet.ListObjects("LotteryResults")
+
+    With RegistrationTable.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=RegistrationTable.ListColumns("Start Date").Range, Order:=xlAscending
+        .SortFields.Add Key:=RegistrationTable.ListColumns("Applicants").Range, Order:=xlAscending
+        .Header = xlYes
+        .Apply
+    End With
+
+    RegistrationTable.Range.RemoveDuplicates Columns:=Array(1, 15), Header:=xlYes
+
+End Sub
+
 Public Sub RunLottery()
     Set RegistrationWorksheet = ThisWorkbook.Sheets("Lottery Results")
     Set RegistrationTable = RegistrationWorksheet.ListObjects("LotteryResults")
     Set ConfigWorksheet = ThisWorkbook.Sheets("Camp Config")
     Set ConfigTable = ConfigWorksheet.ListObjects("ConfigTable")
 
-    Call GenRandomPermutation(RegistrationTable)
+    ' Call GenRandomPermutation(RegistrationTable)
     Call FixColumnWidths(RegistrationTable)
 
     With RegistrationTable.Sort
@@ -194,65 +208,137 @@ Public Sub RunLottery()
     End With
     
     Dim SelectionStatusColumn As ListColumn
-    Dim ApplicantNameColumn As ListColumn
-    Dim SiblingNameColumn As ListColumn
-    
     Set SelectionStatusColumn = RegistrationTable.ListColumns("Lottery Selection Status")
+    
+    Dim ApplicantNameColumn As ListColumn
     Set ApplicantNameColumn = RegistrationTable.ListColumns("Camper Name")
+    
+    Dim SiblingNameColumn As ListColumn
     Set SiblingNameColumn = RegistrationTable.ListColumns("Please enter the full name of the friend or sibling.")
+    
+    Dim CampStartDateColumn As ListColumn
+    Set CampStartDateColumn = RegistrationTable.ListColumns("Start Date")
+    
+    Dim PreRegisteredColumn As ListColumn
+    Set PreRegisteredColumn = RegistrationTable.ListColumns("Registered")
     
     Dim Application As ListRow
     Dim SiblingApplication As ListRow
-    Dim SiblingApplicationRow As Range
+    
+    Dim ApplicationAccepted As Boolean
+        
+    SelectionStatusColumn.DataBodyRange.ClearContents
+    ConfigTable.ListColumns("Filled Spots").DataBodyRange.ClearContents
+    
+    ' Automatically accept applications for anyone who is pre-registered
+    For Each Application In RegistrationTable.ListRows
+        Dim PreRegistrationStatus As Range
+         Set PreRegistrationStatus = Intersect(Application.Range, PreRegisteredColumn.Range)
+        If PreRegistrationStatus = 1 Then
+            ApplicationAccepted = AcceptApplication(Application, ConfigTable, RegistrationTable, "Picked via Pre-registration")
+        End If
+    Next Application
+    
     
     For Each Application In RegistrationTable.ListRows
         Dim CampName As String
         CampName = Application.Range(1).Value2
         
-        Dim LimitsColumn As Range
-        Dim FilledSpotsColumn As Range
-        Dim Limit As Range
-        Dim FilledSpots As Range
-        
         Dim SelectedStatus As Range
         Dim SiblingName As Range
-                
-        Set LimitsColumn = ConfigTable.ListColumns("Limit").DataBodyRange
-        Set FilledSpotsColumn = ConfigTable.ListColumns("Filled Spots").DataBodyRange
+        Dim CampStartDate As Range
         
         Dim CampDataRow As Range
         Set CampDataRow = ConfigTable.ListColumns("Row Labels").DataBodyRange.Find(CampName).EntireRow
         
-        Set Limit = Intersect(CampDataRow, LimitsColumn)
+        Dim FilledSpotsColumn As Range
+        Set FilledSpotsColumn = ConfigTable.ListColumns("Filled Spots").DataBodyRange
+        Dim FilledSpots As Range
         Set FilledSpots = Intersect(CampDataRow, FilledSpotsColumn)
+                
+        Dim LimitsColumn As Range
+        Set LimitsColumn = ConfigTable.ListColumns("Limit").DataBodyRange
+        Dim Limit As Range
+        Set Limit = Intersect(CampDataRow, LimitsColumn)
         
         If FilledSpots.Value2 < Limit.Value2 Then
-            Set SelectedStatus = Intersect(Application.Range, SelectionStatusColumn.Range)
-            Set SiblingName = Intersect(Application.Range, SiblingNameColumn.Range)
+            ApplicationAccepted = AcceptApplication(Application, ConfigTable, RegistrationTable, "Picked via Lottery")
             
-            SelectedStatus.Value2 = "Picked via Lottery"
-            FilledSpots.Value2 = FilledSpots.Value2 + 1
+            Set SiblingName = Intersect(Application.Range, SiblingNameColumn.Range)
+            Set CampStartDate = Intersect(Application.Range, CampStartDateColumn.Range)
             
             If SiblingName.Value2 <> vbNullString Then
-                
-                ' Set SiblingApplicationRow = ApplicantNameColumn.DataBodyRange.Find(SiblingName.Value2).EntireRow
-                SiblingApplicationRow = WorksheetFunction.Match(SiblingName.Value2, ApplicantNameColumn.Range, 0)
-                SiblingApplication = RegistrationTable.DataBodyRange.Rows(SiblingApplicationRow)
-                                
-                Set SelectedStatus = Intersect(SiblingApplication, SelectionStatusColumn)
-                If SelectedStatus.Value2 = vbNullString Then
-                    SelectedStatus.Value2 = "Picked via Sibling"
-                    FilledSpots.Value2 = FilledSpots.Value2 + 1
+            
+                Set SiblingApplication = GetSiblingApplication(RegistrationTable, SiblingName.Value2, CampStartDate.Text)
+                If Not SiblingApplication Is Nothing Then
+                    ApplicationAccepted = AcceptApplication(SiblingApplication, ConfigTable, RegistrationTable, "Picked via Sibling")
                 End If
             End If
-            
         Else
-            Application.Range(7).Value2 = "Not Picked"
-        End If
-        
-        
-       
+            Set SelectedStatus = Intersect(Application.Range, SelectionStatusColumn.Range)
 
+            If SelectedStatus.Value2 = vbNullString Then
+                SelectedStatus.Value2 = "Not Picked"
+            End If
+        End If
     Next Application
            
 End Sub
+
+Public Function AcceptApplication(Application As ListRow, ConfigTable As ListObject, RegistrationTable As ListObject, AcceptReason As String) As Boolean
+    
+    Dim CampName As String
+    CampName = Application.Range(1).Value2
+    
+    Dim CampDataRow As Range
+    Set CampDataRow = ConfigTable.ListColumns("Row Labels").DataBodyRange.Find(CampName).EntireRow
+    
+    Dim FilledSpotsColumn As Range
+    Set FilledSpotsColumn = ConfigTable.ListColumns("Filled Spots").DataBodyRange
+    Dim FilledSpots As Range
+    Set FilledSpots = Intersect(CampDataRow, FilledSpotsColumn)
+    
+    Dim SelectionStatusColumn As ListColumn
+    Set SelectionStatusColumn = RegistrationTable.ListColumns("Lottery Selection Status")
+    Dim SelectedStatus As Range
+    Set SelectedStatus = Intersect(Application.Range, SelectionStatusColumn.Range)
+    
+    If SelectedStatus.Value2 = vbNullString Then
+        SelectedStatus.Value2 = AcceptReason
+        FilledSpots.Value2 = FilledSpots.Value2 + 1
+    End If
+
+End Function
+
+
+Public Sub Test()
+    Set RegistrationWorksheet = ThisWorkbook.Sheets("Lottery Results")
+    Set RegistrationTable = RegistrationWorksheet.ListObjects("LotteryResults")
+
+    Dim row As ListRow
+    Set row = GetSiblingApplication(RegistrationTable, "Luna Wahle", "8/28/2023  8:30:00 AM")
+End Sub
+
+Public Function GetSiblingApplication(tbl As ListObject, ApplicantNameCriteria As String, CampStartDateCriteria As String) As ListRow
+    Dim Application As ListRow
+    
+    Dim ApplicantNameColumn As Range
+    Dim CampStartDateColumn As Range
+
+    Dim ApplicantName As Range
+    Dim CampStartDate As Range
+
+    Set ApplicantNameColumn = tbl.ListColumns("Camper Name").DataBodyRange
+    Set CampStartDateColumn = tbl.ListColumns("Start Date").DataBodyRange
+
+    For Each Application In tbl.ListRows
+        Set ApplicantName = Intersect(Application.Range, ApplicantNameColumn)
+        Set CampStartDate = Intersect(Application.Range, CampStartDateColumn)
+        
+        If InStr(1, ApplicantNameCriteria, ApplicantName.Value2) > 0 Then
+            If CampStartDate.Text = CampStartDateCriteria Then
+                Set GetSiblingApplication = Application
+            End If
+        End If
+    Next Application
+End Function

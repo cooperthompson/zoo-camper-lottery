@@ -13,7 +13,11 @@ Private Sub cmdRollDice_onAction()
     Call LotteryActions.RunLottery
 End Sub
 
-Private Sub cmdCasinoSettings_onAction(ByVal Control As IRibbonControl)
-  ' Call CasinoActions.ExportSettings
+Private Sub cmdTest_onAction()
+  Call LotteryActions.Test
+End Sub
+
+Private Sub cmdRemoveDuplicates_onAction()
+    Call LotteryActions.RemoveDuplicates
 End Sub
 
